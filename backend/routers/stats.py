@@ -147,6 +147,69 @@ async def get_team_stats(
         print(f"Error getting aggregated team stats: {e}")
         return []
 
+@router.get("/players/{player_name}/games")
+async def get_player_game_stats(
+    player_name: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get individual game statistics for a specific player"""
+    try:
+        # Get user's game IDs
+        user_games = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+        
+        if not user_games.data:
+            return []
+        
+        game_ids = [game["id"] for game in user_games.data]
+        
+        # Create a mapping of game_id to game info
+        games_lookup = {game["id"]: game for game in user_games.data}
+        
+        # Get player stats for this specific player across all user's games
+        result = supabase.table("player_stats").select("*").eq("player_name", player_name).in_("game_id", game_ids).execute()
+        
+        # Combine player stats with game information
+        player_games = []
+        for stat in result.data:
+            game_info = games_lookup.get(stat["game_id"])
+            if game_info:
+                player_game = {
+                    "id": stat["id"],
+                    "player_name": stat["player_name"],
+                    "team": stat["team"],
+                    "position": stat["position"],
+                    "goals": stat["goals"],
+                    "assists": stat["assists"],
+                    "points": stat["points"],
+                    "plus_minus": stat["plus_minus"],
+                    "pim": stat["pim"],
+                    "shots": stat["shots"],
+                    "hits": stat["hits"],
+                    "blocks": stat["blocks"],
+                    "takeaways": stat["takeaways"],
+                    "giveaways": stat["giveaways"],
+                    "faceoff_wins": stat["faceoff_wins"],
+                    "faceoff_losses": stat["faceoff_losses"],
+                    "toi_seconds": stat["toi_seconds"],
+                    # Game information
+                    "game_date": game_info["date_attended"],
+                    "home_team": game_info["home_team"],
+                    "away_team": game_info["away_team"],
+                    "final_score_home": game_info["final_score_home"],
+                    "final_score_away": game_info["final_score_away"],
+                    "hockey_reference_url": game_info["hockey_reference_url"]
+                }
+                player_games.append(player_game)
+        
+        # Sort by game date (chronological order)
+        player_games.sort(key=lambda x: x["game_date"])
+        
+        return player_games
+        
+    except Exception as e:
+        print(f"Error getting player game stats: {e}")
+        return []
+
 @router.get("/summary")
 async def get_stats_summary(current_user: User = Depends(get_current_user)):
     # Get user's game IDs

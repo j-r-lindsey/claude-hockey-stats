@@ -12,6 +12,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Link,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -104,7 +105,26 @@ const Stats: React.FC = () => {
   }, [teamFilter]);
 
   const playerColumns: GridColDef[] = [
-    { field: 'player_name', headerName: 'Player', width: 150 },
+    { 
+      field: 'player_name', 
+      headerName: 'Player', 
+      width: 150,
+      renderCell: (params) => (
+        <Link
+          component="button"
+          variant="body2"
+          onClick={() => navigate(`/players/${encodeURIComponent(params.value)}`)}
+          sx={{ 
+            textDecoration: 'underline', 
+            cursor: 'pointer',
+            textAlign: 'left',
+            fontWeight: 'medium'
+          }}
+        >
+          {params.value}
+        </Link>
+      )
+    },
     { field: 'team', headerName: 'Team', width: 100 },
     { field: 'position', headerName: 'Pos', width: 80 },
     { field: 'games_played', headerName: 'GP', width: 60, type: 'number' },

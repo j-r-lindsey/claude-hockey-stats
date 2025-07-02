@@ -72,6 +72,33 @@ export interface TeamStat {
   games_played: number;
 }
 
+export interface PlayerGameStat {
+  id: string;
+  player_name: string;
+  team: string;
+  position: string;
+  goals: number;
+  assists: number;
+  points: number;
+  plus_minus: number;
+  pim: number;
+  shots: number;
+  hits: number;
+  blocks: number;
+  takeaways: number;
+  giveaways: number;
+  faceoff_wins: number;
+  faceoff_losses: number;
+  toi_seconds: number;
+  // Game information
+  game_date: string;
+  home_team: string;
+  away_team: string;
+  final_score_home: number;
+  final_score_away: number;
+  hockey_reference_url: string;
+}
+
 export interface StatsSummary {
   total_games: number;
   teams_seen: string[];

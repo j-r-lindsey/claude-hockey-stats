@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Game, GameCreate, PlayerStat, TeamStat, StatsSummary } from '../types/api';
+import type { Game, GameCreate, PlayerStat, TeamStat, StatsSummary, PlayerGameStat } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -59,6 +59,11 @@ export const apiService = {
 
   async getStatsSummary(): Promise<StatsSummary> {
     const response = await api.get('/stats/summary');
+    return response.data;
+  },
+
+  async getPlayerGameStats(playerName: string): Promise<PlayerGameStat[]> {
+    const response = await api.get(`/stats/players/${encodeURIComponent(playerName)}/games`);
     return response.data;
   },
 };

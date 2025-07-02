@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Stats from './pages/Stats';
 import Login from './pages/Login';
+import PlayerDetail from './pages/PlayerDetail';
 
 const theme = createTheme({
   palette: {
@@ -31,6 +32,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/stats" element={<Stats />} />
+              <Route path="/players/:playerName" element={<PlayerDetail />} />
             </Routes>
           </Layout>
         </Router>
