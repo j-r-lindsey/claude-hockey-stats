@@ -196,3 +196,4 @@ local_*
 backend/test_parser.py
 backend/disable_rls.sql
 backend/fix_rls_policies.sql
+backend/static/
