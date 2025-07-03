@@ -40,8 +40,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_simple.router, prefix="/auth", tags=["authentication"])
-app.include_router(games.router, prefix="/games", tags=["games"])
-app.include_router(stats.router, prefix="/stats", tags=["statistics"])
+app.include_router(games_simple.router, prefix="/games", tags=["games"])
+app.include_router(stats_simple.router, prefix="/stats", tags=["statistics"])
 
 # Create static directory if it doesn't exist
 static_dir = Path(__file__).parent / "static"
