@@ -316,7 +316,7 @@ const Stats: React.FC = () => {
               Filters
             </Typography>
             <Grid container spacing={1.5}>
-              <Grid size={12} sm={4}>
+              <Grid xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
@@ -328,7 +328,7 @@ const Stats: React.FC = () => {
                   })}
                 />
               </Grid>
-              <Grid size={12} sm={4}>
+              <Grid xs={12} sm={4}>
                 <TextField
                   fullWidth
                   size="small"
@@ -340,7 +340,7 @@ const Stats: React.FC = () => {
                   })}
                 />
               </Grid>
-              <Grid size={12} sm={4}>
+              <Grid xs={12} sm={4}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Position</InputLabel>
                   <Select
@@ -403,7 +403,7 @@ const Stats: React.FC = () => {
               Filters
             </Typography>
             <Grid container spacing={1.5}>
-              <Grid size={12} sm={6}>
+              <Grid xs={12} sm={6}>
                 <TextField
                   fullWidth
                   size="small"

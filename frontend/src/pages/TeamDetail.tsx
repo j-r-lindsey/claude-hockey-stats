@@ -79,7 +79,7 @@ const TeamDetail: React.FC = () => {
       field: 'game_date',
       headerName: 'Date',
       width: 120,
-      valueFormatter: (value) => {
+      valueFormatter: (value: any) => {
         if (!value) return '';
         // Handle ISO date format like "2024-06-18T00:00:00+00:00"
         if (typeof value === 'string' && value.includes('T')) {
@@ -95,7 +95,7 @@ const TeamDetail: React.FC = () => {
       field: 'opponent',
       headerName: 'Opponent',
       width: 180,
-      valueGetter: (params) => `${getGameLocation(params.row)} ${getOpponent(params.row)}`
+      valueGetter: (value: any, row: any) => `${getGameLocation(row)} ${getOpponent(row)}`
     },
     {
       field: 'result',
@@ -117,7 +117,7 @@ const TeamDetail: React.FC = () => {
       field: 'score',
       headerName: 'Score',
       width: 100,
-      valueGetter: (params) => `${params.row.goals}-${params.row.goals_against}`
+      valueGetter: (value: any, row: any) => `${row.goals}-${row.goals_against}`
     },
     {
       field: 'goals',

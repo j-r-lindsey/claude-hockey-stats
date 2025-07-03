@@ -88,7 +88,7 @@ const Home: React.FC = () => {
 
         <Grid container spacing={4} sx={{ mt: 4 }}>
           {features.map((feature, index) => (
-            <Grid size={12} md={4} key={index}>
+            <Grid xs={12} md={4} key={index}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                   <Box sx={{ mb: 2, color: 'primary.main' }}>
