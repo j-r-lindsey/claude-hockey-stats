@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   Container,
-  Grid,
   Card,
   CardContent,
 } from '@mui/material';
@@ -86,9 +85,18 @@ const Home: React.FC = () => {
           </Button>
         )}
 
-        <Grid container spacing={4} sx={{ mt: 4 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          gap: 4, 
+          mt: 4,
+          justifyContent: 'center' 
+        }}>
           {features.map((feature, index) => (
-            <Grid xs={12} md={4} key={index}>
+            <Box key={index} sx={{ 
+              flex: { xs: '1 1 100%', md: '1 1 300px' },
+              maxWidth: { md: '350px' }
+            }}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                   <Box sx={{ mb: 2, color: 'primary.main' }}>
@@ -102,9 +110,9 @@ const Home: React.FC = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Box>
     </Container>
   );

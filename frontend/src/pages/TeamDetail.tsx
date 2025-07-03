@@ -95,7 +95,7 @@ const TeamDetail: React.FC = () => {
       field: 'opponent',
       headerName: 'Opponent',
       width: 180,
-      valueGetter: (value: any, row: any) => `${getGameLocation(row)} ${getOpponent(row)}`
+      valueGetter: (_: any, row: any) => `${getGameLocation(row)} ${getOpponent(row)}`
     },
     {
       field: 'result',
@@ -117,7 +117,7 @@ const TeamDetail: React.FC = () => {
       field: 'score',
       headerName: 'Score',
       width: 100,
-      valueGetter: (value: any, row: any) => `${row.goals}-${row.goals_against}`
+      valueGetter: (_: any, row: any) => `${row.goals}-${row.goals_against}`
     },
     {
       field: 'goals',

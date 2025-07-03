@@ -5,7 +5,6 @@ import {
   Tabs,
   Tab,
   TextField,
-  Grid,
   Card,
   CardContent,
   FormControl,
@@ -315,8 +314,8 @@ const Stats: React.FC = () => {
             <Typography variant="subtitle2" gutterBottom sx={{ mb: 1 }}>
               Filters
             </Typography>
-            <Grid container spacing={1.5}>
-              <Grid xs={12} sm={4}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 200px' } }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -327,8 +326,8 @@ const Stats: React.FC = () => {
                     player_name: e.target.value
                   })}
                 />
-              </Grid>
-              <Grid xs={12} sm={4}>
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 200px' } }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -339,8 +338,8 @@ const Stats: React.FC = () => {
                     team: e.target.value
                   })}
                 />
-              </Grid>
-              <Grid xs={12} sm={4}>
+              </Box>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 200px' } }}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Position</InputLabel>
                   <Select
@@ -359,8 +358,8 @@ const Stats: React.FC = () => {
                     <MenuItem value="G">Goalie</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
 
@@ -402,8 +401,8 @@ const Stats: React.FC = () => {
             <Typography variant="subtitle2" gutterBottom sx={{ mb: 1 }}>
               Filters
             </Typography>
-            <Grid container spacing={1.5}>
-              <Grid xs={12} sm={6}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
                 <TextField
                   fullWidth
                   size="small"
@@ -411,8 +410,8 @@ const Stats: React.FC = () => {
                   value={teamFilter}
                   onChange={(e) => setTeamFilter(e.target.value)}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
 
