@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-from routers import auth_simple, games, stats
+from routers import auth_simple
+from routers import games_simple, stats_simple
 
 load_dotenv()
 
