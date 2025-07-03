@@ -56,8 +56,11 @@ A full-stack web application for tracking and analyzing hockey game statistics f
 
 3. **Database Setup**
    - Create a Supabase project
-   - Run the SQL schema from `database/schema.sql`
-   - Run the team stats migration from `database/update_team_stats_schema.sql`
+   - Run the migration files in order from `database/migrations/`:
+     1. `001_initial_schema.sql` - Core tables and indexes
+     2. `002_disable_rls.sql` - Disable Row Level Security  
+     3. `003_create_aggregated_views.sql` - Performance optimization views
+   - See `database/README.md` for detailed instructions
 
 4. **Frontend Setup**
    ```bash

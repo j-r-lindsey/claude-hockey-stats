@@ -15,17 +15,8 @@ async def get_player_stats(
 ):
     """Get aggregated player statistics across all games"""
     try:
-        # Build the query
-        query = supabase.table("player_stats").select("*")
-        
-        # Filter by user's games
-        user_games = supabase.table("games").select("id").eq("user_id", current_user.id).execute()
-        game_ids = [game["id"] for game in user_games.data]
-        
-        if not game_ids:
-            return []
-        
-        query = query.in_("game_id", game_ids)
+        # Use the aggregated view for efficient database-level aggregation
+        query = supabase.table("player_stats_aggregated").select("*").eq("user_id", current_user.id)
         
         # Apply filters
         if player_name:
@@ -37,51 +28,31 @@ async def get_player_stats(
         
         result = query.execute()
         
-        # Aggregate by player name (combining across teams if player moved)
-        player_aggregates = {}
-        for stat in result.data:
-            key = stat["player_name"]  # Aggregate by player name only
-            
-            if key not in player_aggregates:
-                player_aggregates[key] = {
-                    "id": f"player_{key}",
-                    "player_name": stat["player_name"],
-                    "team": stat["team"],  # Show most recent team
-                    "position": stat["position"],
-                    "goals": 0,
-                    "assists": 0,
-                    "points": 0,
-                    "plus_minus": 0,
-                    "pim": 0,
-                    "shots": 0,
-                    "hits": 0,
-                    "blocks": 0,
-                    "takeaways": 0,
-                    "giveaways": 0,
-                    "faceoff_wins": 0,
-                    "faceoff_losses": 0,
-                    "toi_seconds": 0,
-                    "games_played": 0
-                }
-            
-            # Aggregate the stats
-            agg = player_aggregates[key]
-            agg["goals"] += stat["goals"]
-            agg["assists"] += stat["assists"]
-            agg["points"] += stat["points"]
-            agg["plus_minus"] += stat["plus_minus"]
-            agg["pim"] += stat["pim"]
-            agg["shots"] += stat["shots"]
-            agg["hits"] += stat["hits"]
-            agg["blocks"] += stat["blocks"]
-            agg["takeaways"] += stat["takeaways"]
-            agg["giveaways"] += stat["giveaways"]
-            agg["faceoff_wins"] += stat["faceoff_wins"]
-            agg["faceoff_losses"] += stat["faceoff_losses"]
-            agg["toi_seconds"] += stat["toi_seconds"]
-            agg["games_played"] += 1
+        # Transform the result to match the expected format
+        player_stats = []
+        for row in result.data:
+            player_stats.append({
+                "id": f"player_{row['player_name']}",
+                "player_name": row["player_name"],
+                "team": row["team"],
+                "position": row["position"],
+                "goals": row["goals"],
+                "assists": row["assists"],
+                "points": row["points"],
+                "plus_minus": row["plus_minus"],
+                "pim": row["pim"],
+                "shots": row["shots"],
+                "hits": row["hits"],
+                "blocks": row["blocks"],
+                "takeaways": row["takeaways"],
+                "giveaways": row["giveaways"],
+                "faceoff_wins": row["faceoff_wins"],
+                "faceoff_losses": row["faceoff_losses"],
+                "toi_seconds": row["toi_seconds"],
+                "games_played": row["games_played"]
+            })
         
-        return list(player_aggregates.values())
+        return player_stats
         
     except Exception as e:
         print(f"Error getting aggregated player stats: {e}")
@@ -94,54 +65,32 @@ async def get_team_stats(
 ):
     """Get aggregated team statistics across all games"""
     try:
-        # Get user's games
-        games_query = supabase.table("games").select("*").eq("user_id", current_user.id)
-        games_result = games_query.execute()
+        # Use the aggregated view for efficient database-level aggregation
+        query = supabase.table("team_stats_aggregated").select("*").eq("user_id", current_user.id)
         
-        if not games_result.data:
-            return []
-        
-        game_ids = [game["id"] for game in games_result.data]
-        
-        # Get team stats for user's games
-        query = supabase.table("team_stats").select("*").in_("game_id", game_ids)
-        
+        # Apply filters
         if team_name:
             query = query.ilike("team_name", f"%{team_name}%")
         
         result = query.execute()
         
-        # Aggregate by team name
-        team_aggregates = {}
-        for stat in result.data:
-            team = stat["team_name"]
-            
-            if team not in team_aggregates:
-                team_aggregates[team] = {
-                    "id": f"team_{team}",
-                    "team_name": team,
-                    "goals": 0,
-                    "goals_against": 0,
-                    "wins": 0,
-                    "losses": 0,
-                    "ties": 0,
-                    "overtime_losses": 0,
-                    "shootout_losses": 0,
-                    "games_played": 0
-                }
-            
-            # Aggregate the stats
-            agg = team_aggregates[team]
-            agg["goals"] += stat["goals"]
-            agg["goals_against"] += stat["goals_against"]
-            agg["wins"] += stat["wins"]
-            agg["losses"] += stat["losses"]
-            agg["ties"] += stat["ties"]
-            agg["overtime_losses"] += stat["overtime_losses"]
-            agg["shootout_losses"] += stat["shootout_losses"]
-            agg["games_played"] += 1
+        # Transform the result to match the expected format
+        team_stats = []
+        for row in result.data:
+            team_stats.append({
+                "id": f"team_{row['team_name']}",
+                "team_name": row["team_name"],
+                "goals": row["goals"],
+                "goals_against": row["goals_against"],
+                "wins": row["wins"],
+                "losses": row["losses"],
+                "ties": row["ties"],
+                "overtime_losses": row["overtime_losses"],
+                "shootout_losses": row["shootout_losses"],
+                "games_played": row["games_played"]
+            })
         
-        return list(team_aggregates.values())
+        return team_stats
         
     except Exception as e:
         print(f"Error getting aggregated team stats: {e}")
