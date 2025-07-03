@@ -68,6 +68,10 @@ const Stats: React.FC = () => {
     position: '',
   });
   const [teamFilter, setTeamFilter] = useState('');
+  const [dataGridKey, setDataGridKey] = useState(0);
+  const [sortingModel, setSortingModel] = useState([
+    { field: 'points', sort: 'desc' as const }
+  ]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -81,7 +85,17 @@ const Stats: React.FC = () => {
   const loadPlayerStats = async () => {
     try {
       const data = await apiService.getPlayerStats(playerFilters);
-      setPlayerStats(data);
+      // Ensure each row has a stable unique ID to prevent duplicates
+      const dataWithUniqueIds = data.map(player => ({
+        ...player,
+        id: `${player.player_name}-${player.team}-${player.position}`.replace(/\s+/g, '-')
+      }));
+      setPlayerStats(dataWithUniqueIds);
+      // Only reset sort and key when filters change, not on every load
+      if (Object.values(playerFilters).some(filter => filter !== '')) {
+        setSortingModel([{ field: 'points', sort: 'desc' }]);
+        setDataGridKey(prev => prev + 1);
+      }
     } catch (error) {
       console.error('Failed to load player stats:', error);
     }
@@ -90,9 +104,21 @@ const Stats: React.FC = () => {
   const loadTeamStats = async () => {
     try {
       const data = await apiService.getTeamStats(teamFilter || undefined);
-      setTeamStats(data);
+      // Ensure each row has a stable unique ID
+      const dataWithUniqueIds = data.map(team => ({
+        ...team,
+        id: `team-${team.team_name}`.replace(/\s+/g, '-')
+      }));
+      setTeamStats(dataWithUniqueIds);
     } catch (error) {
       console.error('Failed to load team stats:', error);
+    }
+  };
+
+  const handleSortModelChange = (newSortModel: any) => {
+    // Only update if it's actually different
+    if (JSON.stringify(newSortModel) !== JSON.stringify(sortingModel)) {
+      setSortingModel(newSortModel);
     }
   };
 
@@ -123,10 +149,36 @@ const Stats: React.FC = () => {
         >
           {params.value}
         </Link>
-      )
+      ),
+      sortComparator: (v1, v2) => {
+        // Force string comparison to be consistent
+        const a = String(v1 || '').toLowerCase();
+        const b = String(v2 || '').toLowerCase();
+        return a.localeCompare(b);
+      }
     },
-    { field: 'team', headerName: 'Team', width: 100 },
-    { field: 'position', headerName: 'Pos', width: 80 },
+    { 
+      field: 'team', 
+      headerName: 'Team', 
+      width: 100,
+      sortComparator: (v1, v2) => {
+        // Force string comparison to be consistent
+        const a = String(v1 || '').toLowerCase();
+        const b = String(v2 || '').toLowerCase();
+        return a.localeCompare(b);
+      }
+    },
+    { 
+      field: 'position', 
+      headerName: 'Pos', 
+      width: 80,
+      sortComparator: (v1, v2) => {
+        // Force string comparison to be consistent
+        const a = String(v1 || '').toLowerCase();
+        const b = String(v2 || '').toLowerCase();
+        return a.localeCompare(b);
+      }
+    },
     { field: 'games_played', headerName: 'GP', width: 60, type: 'number' },
     { field: 'goals', headerName: 'G', width: 60, type: 'number' },
     { field: 'assists', headerName: 'A', width: 60, type: 'number' },
@@ -151,11 +203,12 @@ const Stats: React.FC = () => {
       }
     },
     { 
-      field: 'toi_display', 
+      field: 'toi_seconds', 
       headerName: 'TOI', 
       width: 80,
-      valueGetter: (_, row) => {
-        const seconds = row.toi_seconds;
+      type: 'number',
+      valueFormatter: (value) => {
+        const seconds = value || 0;
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -164,7 +217,17 @@ const Stats: React.FC = () => {
   ];
 
   const teamColumns: GridColDef[] = [
-    { field: 'team_name', headerName: 'Team', width: 150 },
+    { 
+      field: 'team_name', 
+      headerName: 'Team', 
+      width: 150,
+      sortComparator: (v1, v2) => {
+        // Force string comparison to be consistent
+        const a = String(v1 || '').toLowerCase();
+        const b = String(v2 || '').toLowerCase();
+        return a.localeCompare(b);
+      }
+    },
     { 
       field: 'games_played', 
       headerName: 'GP', 
@@ -291,23 +354,20 @@ const Stats: React.FC = () => {
           <CardContent>
             <div style={{ height: 'calc(100vh - 240px)', width: '100%' }}>
               <DataGrid
+                key={`player-grid-${dataGridKey}`}
                 rows={playerStats}
                 columns={playerColumns}
+                sortModel={sortingModel}
+                onSortModelChange={handleSortModelChange}
                 initialState={{
                   pagination: {
                     paginationModel: { pageSize: 25 },
-                  },
-                  sorting: {
-                    sortModel: [
-                      { field: 'points', sort: 'desc' },
-                      { field: 'goals', sort: 'desc' },
-                      { field: 'assists', sort: 'desc' }
-                    ],
                   },
                 }}
                 pageSizeOptions={[25, 50, 100]}
                 disableRowSelectionOnClick
                 density="compact"
+                sortingOrder={['desc', 'asc']}
                 sx={{
                   '& .MuiDataGrid-cell': {
                     padding: '4px 8px',
@@ -346,6 +406,7 @@ const Stats: React.FC = () => {
           <CardContent>
             <div style={{ height: 'calc(100vh - 220px)', width: '100%' }}>
               <DataGrid
+                key={`team-grid-${dataGridKey}`}
                 rows={teamStats}
                 columns={teamColumns}
                 initialState={{
@@ -361,6 +422,7 @@ const Stats: React.FC = () => {
                 pageSizeOptions={[25, 50, 100]}
                 disableRowSelectionOnClick
                 density="compact"
+                sortingOrder={['desc', 'asc']}
                 sx={{
                   '& .MuiDataGrid-cell': {
                     padding: '4px 8px',
