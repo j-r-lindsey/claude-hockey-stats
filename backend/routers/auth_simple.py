@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 from datetime import datetime, timedelta
 import jwt
-from config.database import supabase, supabase_admin
+from config.database_simple import supabase, supabase_admin
 from models.schemas import User, UserCreate, UserLogin, Token
 from services.auth_service_simple import verify_password, get_password_hash, create_access_token
 

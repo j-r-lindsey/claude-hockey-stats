@@ -4,10 +4,11 @@ services:
     name: hockey-stats-app
     runtime: python
     buildCommand: |
-      cd backend && pip install -r requirements.txt &&
+      cd backend && pip install -r requirements-ultra-minimal.txt &&
+      mkdir -p static &&
       cd ../frontend && npm ci && npm run build &&
       cp -r dist/* ../backend/static/
-    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "cd backend && uvicorn main_simple:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: SUPABASE_URL
         sync: false
