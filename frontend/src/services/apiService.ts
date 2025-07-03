@@ -36,6 +36,16 @@ export const apiService = {
     await api.delete(`/games/${gameId}`);
   },
 
+  async createBulkGames(urlsText: string): Promise<{ task_id: string; total_urls: number; message: string }> {
+    const response = await api.post('/games/bulk', { urls_text: urlsText });
+    return response.data;
+  },
+
+  async getBulkTaskStatus(taskId: string): Promise<any> {
+    const response = await api.get(`/games/bulk/${taskId}`);
+    return response.data;
+  },
+
   // Stats
   async getPlayerStats(filters?: {
     player_name?: string;

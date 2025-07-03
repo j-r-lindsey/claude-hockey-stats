@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from typing import List
 from models.schemas import Game, GameCreate, User
 from routers.auth import get_current_user
 from config.database import supabase
 from services.hockey_parser import parse_hockey_reference_url
+from services.task_queue import task_queue, TaskStatus
 from datetime import datetime
+import re
 
 router = APIRouter()
 
@@ -107,3 +109,86 @@ async def delete_game(
     supabase.table("games").delete().eq("id", game_id).execute()
     
     return {"message": "Game deleted successfully"}
+
+from pydantic import BaseModel
+
+class BulkGameRequest(BaseModel):
+    urls_text: str
+
+@router.post("/bulk")
+async def create_bulk_games(
+    background_tasks: BackgroundTasks,
+    request: BulkGameRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Start bulk processing of multiple Hockey Reference URLs"""
+    try:
+        # Parse URLs from text input
+        urls = []
+        for line in request.urls_text.strip().split('\n'):
+            line = line.strip()
+            if line and 'hockey-reference.com' in line:
+                # Extract URL from line (handles cases where there might be extra text)
+                url_match = re.search(r'https?://[^\s]+hockey-reference\.com[^\s]*', line)
+                if url_match:
+                    urls.append(url_match.group())
+                elif line.startswith('http'):
+                    urls.append(line)
+        
+        if not urls:
+            raise HTTPException(status_code=400, detail="No valid Hockey Reference URLs found")
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_urls = []
+        for url in urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        
+        # Create task
+        task_id = task_queue.create_task(len(unique_urls))
+        
+        # Start background processing
+        background_tasks.add_task(
+            task_queue.process_bulk_games,
+            task_id,
+            unique_urls,
+            current_user.id
+        )
+        
+        return {
+            "task_id": task_id,
+            "total_urls": len(unique_urls),
+            "message": f"Started processing {len(unique_urls)} games. Use the task_id to check progress."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error starting bulk processing: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error starting bulk processing: {str(e)}")
+
+@router.get("/bulk/{task_id}")
+async def get_bulk_task_status(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get the status of a bulk processing task"""
+    task = task_queue.get_task(task_id)
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return {
+        "task_id": task.task_id,
+        "status": task.status.value,
+        "progress": task.progress,
+        "total_items": task.total_items,
+        "completed_items": task.completed_items,
+        "failed_items": task.failed_items,
+        "results": task.results,
+        "errors": task.errors,
+        "created_at": task.created_at.isoformat(),
+        "updated_at": task.updated_at.isoformat()
+    }

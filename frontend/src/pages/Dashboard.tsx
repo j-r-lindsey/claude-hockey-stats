@@ -20,8 +20,13 @@ import {
   IconButton,
   Alert,
   Tooltip,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from '@mui/material';
-import { Add, Delete, Sports, Refresh, OpenInNew } from '@mui/icons-material';
+import { Add, Delete, Sports, Refresh, OpenInNew, Upload } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 import type { Game, GameCreate, StatsSummary } from '../types/api';
@@ -34,8 +39,12 @@ const Dashboard: React.FC = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openBulkDialog, setOpenBulkDialog] = useState(false);
   const [newGameUrl, setNewGameUrl] = useState('');
+  const [bulkUrls, setBulkUrls] = useState('');
   const [loading, setLoading] = useState(false);
+  const [bulkTaskId, setBulkTaskId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,6 +124,55 @@ const Dashboard: React.FC = () => {
     window.open(gameUrl, '_blank');
   };
 
+  const handleBulkLoad = async () => {
+    if (!bulkUrls.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.createBulkGames(bulkUrls);
+      setBulkTaskId(response.task_id);
+      setBulkUrls('');
+      
+      // Start polling for progress
+      pollBulkProgress(response.task_id);
+    } catch (error) {
+      setError('Failed to start bulk loading. Please check the URLs and try again.');
+      setLoading(false);
+    }
+  };
+
+  const pollBulkProgress = async (taskId: string) => {
+    try {
+      const progress = await apiService.getBulkTaskStatus(taskId);
+      setBulkProgress(progress);
+      
+      if (progress.status === 'completed' || progress.status === 'failed') {
+        setLoading(false);
+        setBulkTaskId(null);
+        loadData(); // Refresh the games list
+        if (progress.status === 'completed') {
+          setOpenBulkDialog(false);
+        }
+      } else {
+        // Continue polling every 2 seconds
+        setTimeout(() => pollBulkProgress(taskId), 2000);
+      }
+    } catch (error) {
+      console.error('Failed to get bulk task status:', error);
+      setLoading(false);
+      setBulkTaskId(null);
+    }
+  };
+
+  const closeBulkDialog = () => {
+    setOpenBulkDialog(false);
+    setBulkUrls('');
+    setBulkProgress(null);
+    setBulkTaskId(null);
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -183,13 +241,22 @@ const Dashboard: React.FC = () => {
           <Typography variant="h6" component="h2">
             Your Games
           </Typography>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpenDialog(true)}
-          >
-            Add Game
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<Upload />}
+              onClick={() => setOpenBulkDialog(true)}
+            >
+              Bulk Load
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setOpenDialog(true)}
+            >
+              Add Game
+            </Button>
+          </Box>
         </Box>
 
         <Card>
@@ -301,6 +368,69 @@ const Dashboard: React.FC = () => {
               disabled={loading || !newGameUrl}
             >
               {loading ? 'Adding...' : 'Add Game'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={openBulkDialog} onClose={closeBulkDialog} maxWidth="md" fullWidth>
+          <DialogTitle>Bulk Load Games</DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Hockey Reference URLs"
+              fullWidth
+              multiline
+              rows={8}
+              variant="outlined"
+              value={bulkUrls}
+              onChange={(e) => setBulkUrls(e.target.value)}
+              placeholder={`Paste multiple Hockey Reference URLs, one per line:\n\nhttps://www.hockey-reference.com/boxscores/20250225...\nhttps://www.hockey-reference.com/boxscores/20250301...\nhttps://www.hockey-reference.com/boxscores/20250315...`}
+              helperText="Paste multiple URLs, one per line. Game dates will be automatically extracted."
+              disabled={loading}
+            />
+            
+            {bulkProgress && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Processing Progress: {bulkProgress.completed_items + bulkProgress.failed_items} / {bulkProgress.total_items}
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={bulkProgress.progress} 
+                  sx={{ mb: 2 }}
+                />
+                
+                {bulkProgress.results && bulkProgress.results.length > 0 && (
+                  <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                    <List dense>
+                      {bulkProgress.results.map((result: any, index: number) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={result.matchup || result.url}
+                            secondary={result.status === 'success' ? 'Successfully added' : result.error}
+                          />
+                          <Chip 
+                            label={result.status} 
+                            color={result.status === 'success' ? 'success' : 'error'}
+                            size="small"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeBulkDialog} disabled={loading}>Cancel</Button>
+            <Button
+              onClick={handleBulkLoad}
+              variant="contained"
+              disabled={loading || !bulkUrls.trim()}
+            >
+              {loading ? 'Processing...' : 'Start Bulk Load'}
             </Button>
           </DialogActions>
         </Dialog>
