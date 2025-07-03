@@ -284,8 +284,40 @@ def extract_player_stats(soup: BeautifulSoup) -> List[Dict[str, Any]]:
         print(f"Error parsing player stats: {e}")
         return []
 
+def extract_game_outcome(soup: BeautifulSoup, home_team: str, away_team: str, home_goals: int, away_goals: int) -> str:
+    """Extract game outcome (regulation, OT, SO) from league scores section"""
+    try:
+        # Look for the scores section that shows games around the league
+        scores_section = soup.find("div", {"class": "scores"}) or soup.find("div", {"id": "scores"})
+        
+        if scores_section:
+            # Look for the current game in the scores list
+            score_links = scores_section.find_all("a", href=True)
+            
+            for link in score_links:
+                link_text = link.get_text(strip=True)
+                
+                # Check if this is our game by looking for team names
+                if (home_team.lower() in link_text.lower() or away_team.lower() in link_text.lower()):
+                    # Check for shootout indicator (SO)
+                    if "SO" in link_text:
+                        return "SO"
+                    # Check for overtime indicator (OT) 
+                    elif "OT" in link_text:
+                        return "OT"
+                    # If no special indicator, it's regulation
+                    else:
+                        return "REG"
+        
+        # Fallback: if we can't find the outcome, assume regulation
+        return "REG"
+    
+    except Exception as e:
+        print(f"Error extracting game outcome: {e}")
+        return "REG"
+
 def extract_team_stats(soup: BeautifulSoup) -> List[Dict[str, Any]]:
-    """Extract team-level statistics including season records"""
+    """Extract team-level statistics with proper game outcome"""
     try:
         team_stats = []
         
@@ -297,33 +329,37 @@ def extract_team_stats(soup: BeautifulSoup) -> List[Dict[str, Any]]:
         home_goals = extract_home_score(soup)
         away_goals = extract_away_score(soup)
         
-        # Look for team record information in various locations
-        away_record = extract_team_record(soup, away_team)
-        home_record = extract_team_record(soup, home_team)
+        # Determine game outcome (REG, OT, SO)
+        game_outcome = extract_game_outcome(soup, home_team, away_team, home_goals, away_goals)
         
-        # Create team stat entries with record information
+        # Determine winner
+        home_won = home_goals > away_goals
+        away_won = away_goals > home_goals
+        tie_game = home_goals == away_goals
+        
+        # Calculate wins/losses based on outcome
         away_stat = {
             "team_name": away_team,
             "is_home": False,
             "goals": away_goals,
-            "goals_against": home_goals,  # Goals against = opponent's goals
-            "wins": away_record.get("wins", 0),
-            "losses": away_record.get("losses", 0),
-            "ties": away_record.get("ties", 0),
-            "overtime_losses": away_record.get("overtime_losses", 0),
-            "shootout_losses": away_record.get("shootout_losses", 0)
+            "goals_against": home_goals,
+            "wins": 1 if away_won else 0,
+            "losses": 1 if (home_won and game_outcome == "REG") else 0,
+            "ties": 1 if tie_game else 0,
+            "overtime_losses": 1 if (home_won and game_outcome == "OT") else 0,
+            "shootout_losses": 1 if (home_won and game_outcome == "SO") else 0
         }
         
         home_stat = {
             "team_name": home_team,
             "is_home": True,
             "goals": home_goals,
-            "goals_against": away_goals,  # Goals against = opponent's goals
-            "wins": home_record.get("wins", 0),
-            "losses": home_record.get("losses", 0),
-            "ties": home_record.get("ties", 0),
-            "overtime_losses": home_record.get("overtime_losses", 0),
-            "shootout_losses": home_record.get("shootout_losses", 0)
+            "goals_against": away_goals,
+            "wins": 1 if home_won else 0,
+            "losses": 1 if (away_won and game_outcome == "REG") else 0,
+            "ties": 1 if tie_game else 0,
+            "overtime_losses": 1 if (away_won and game_outcome == "OT") else 0,
+            "shootout_losses": 1 if (away_won and game_outcome == "SO") else 0
         }
         
         return [away_stat, home_stat]

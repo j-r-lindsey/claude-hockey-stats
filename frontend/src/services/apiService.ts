@@ -46,6 +46,11 @@ export const apiService = {
     return response.data;
   },
 
+  async reprocessAllGames(): Promise<{ task_id: string; total_games: number; message: string }> {
+    const response = await api.post('/games/reprocess-all');
+    return response.data;
+  },
+
   // Stats
   async getPlayerStats(filters?: {
     player_name?: string;

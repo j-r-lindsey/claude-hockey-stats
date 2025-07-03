@@ -40,11 +40,14 @@ const Dashboard: React.FC = () => {
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openBulkDialog, setOpenBulkDialog] = useState(false);
+  const [openReprocessDialog, setOpenReprocessDialog] = useState(false);
   const [newGameUrl, setNewGameUrl] = useState('');
   const [bulkUrls, setBulkUrls] = useState('');
   const [loading, setLoading] = useState(false);
   const [bulkTaskId, setBulkTaskId] = useState<string | null>(null);
+  const [reprocessTaskId, setReprocessTaskId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<any>(null);
+  const [reprocessProgress, setReprocessProgress] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -173,6 +176,51 @@ const Dashboard: React.FC = () => {
     setBulkTaskId(null);
   };
 
+  const handleReprocessAll = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiService.reprocessAllGames();
+      setReprocessTaskId(response.task_id);
+      
+      // Start polling for progress
+      pollReprocessProgress(response.task_id);
+    } catch (error) {
+      setError('Failed to start reprocessing. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const pollReprocessProgress = async (taskId: string) => {
+    try {
+      const progress = await apiService.getBulkTaskStatus(taskId);
+      setReprocessProgress(progress);
+      
+      if (progress.status === 'completed' || progress.status === 'failed') {
+        setLoading(false);
+        setReprocessTaskId(null);
+        loadData(); // Refresh the games list
+        if (progress.status === 'completed') {
+          setOpenReprocessDialog(false);
+        }
+      } else {
+        // Continue polling every 2 seconds
+        setTimeout(() => pollReprocessProgress(taskId), 2000);
+      }
+    } catch (error) {
+      console.error('Failed to get reprocess task status:', error);
+      setLoading(false);
+      setReprocessTaskId(null);
+    }
+  };
+
+  const closeReprocessDialog = () => {
+    setOpenReprocessDialog(false);
+    setReprocessProgress(null);
+    setReprocessTaskId(null);
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -242,6 +290,14 @@ const Dashboard: React.FC = () => {
             Your Games
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<Refresh />}
+              onClick={() => setOpenReprocessDialog(true)}
+              disabled={games.length === 0}
+            >
+              Reprocess All
+            </Button>
             <Button
               variant="outlined"
               startIcon={<Upload />}
@@ -432,6 +488,63 @@ const Dashboard: React.FC = () => {
             >
               {loading ? 'Processing...' : 'Start Bulk Load'}
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={openReprocessDialog} onClose={closeReprocessDialog} maxWidth="md" fullWidth>
+          <DialogTitle>Reprocess All Games</DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              This will reprocess all {games.length} games with the latest parsing logic to update team records, player stats, and game outcomes. 
+              This process may take several minutes.
+            </Typography>
+            
+            {reprocessProgress && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Processing Progress: {reprocessProgress.completed_items + reprocessProgress.failed_items} / {reprocessProgress.total_items}
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={reprocessProgress.progress} 
+                  sx={{ mb: 2 }}
+                />
+                
+                {reprocessProgress.results && reprocessProgress.results.length > 0 && (
+                  <Box sx={{ maxHeight: 200, overflow: 'auto' }}>
+                    <List dense>
+                      {reprocessProgress.results.map((result: any, index: number) => (
+                        <ListItem key={index}>
+                          <ListItemText
+                            primary={result.matchup || result.url}
+                            secondary={result.status === 'success' ? 'Successfully reprocessed' : result.error}
+                          />
+                          <Chip 
+                            label={result.status} 
+                            color={result.status === 'success' ? 'success' : 'error'}
+                            size="small"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeReprocessDialog} disabled={loading}>
+              {loading ? 'Processing...' : 'Close'}
+            </Button>
+            {!loading && !reprocessTaskId && (
+              <Button
+                onClick={handleReprocessAll}
+                variant="contained"
+                color="primary"
+              >
+                Start Reprocessing
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       </Box>

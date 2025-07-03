@@ -154,6 +154,89 @@ class InMemoryTaskQueue:
             # Mark task as completed
             self.update_task(task_id, status=TaskStatus.COMPLETED)
 
+    async def process_reprocess_games(self, task_id: str, game_data: List[tuple], user_id: str):
+        """Reprocess existing games with rate limiting"""
+        async with self.processing_lock:
+            self.update_task(task_id, status=TaskStatus.PROCESSING)
+            
+            for i, (game_id, url) in enumerate(game_data):
+                try:
+                    # Add delay between requests to be respectful to Hockey Reference
+                    if i > 0:
+                        await asyncio.sleep(2)  # 2 second delay between requests
+                    
+                    # Parse the game with updated logic
+                    parsed_data = parse_hockey_reference_url(url.strip())
+                    
+                    # Use extracted date from URL if available, otherwise use existing date
+                    game_date = parsed_data.get("game_date")
+                    if game_date:
+                        date_attended = game_date
+                    else:
+                        # Keep existing date
+                        existing_game = supabase.table("games").select("date_attended").eq("id", game_id).execute()
+                        date_attended = existing_game.data[0]["date_attended"] if existing_game.data else datetime.now().isoformat()
+                    
+                    # Update game record
+                    game_record = {
+                        "hockey_reference_url": url.strip(),
+                        "date_attended": date_attended,
+                        "home_team": parsed_data["home_team"],
+                        "away_team": parsed_data["away_team"],
+                        "final_score_home": parsed_data["final_score_home"],
+                        "final_score_away": parsed_data["final_score_away"],
+                        "created_at": datetime.now().isoformat()
+                    }
+                    
+                    # Update the game
+                    supabase.table("games").update(game_record).eq("id", game_id).execute()
+                    
+                    # Delete existing stats for this game
+                    supabase.table("player_stats").delete().eq("game_id", game_id).execute()
+                    supabase.table("team_stats").delete().eq("game_id", game_id).execute()
+                    
+                    # Store updated player stats
+                    for player_stat in parsed_data["player_stats"]:
+                        player_stat["game_id"] = game_id
+                        supabase.table("player_stats").insert(player_stat).execute()
+                    
+                    # Store updated team stats
+                    for team_stat in parsed_data["team_stats"]:
+                        team_stat["game_id"] = game_id
+                        supabase.table("team_stats").insert(team_stat).execute()
+                    
+                    # Update task with success
+                    task = self.get_task(task_id)
+                    task.results.append({
+                        "game_id": game_id,
+                        "url": url.strip(),
+                        "matchup": f"{parsed_data['away_team']} @ {parsed_data['home_team']}",
+                        "status": "success"
+                    })
+                    task.completed_items += 1
+                    self.update_task(task_id, results=task.results, completed_items=task.completed_items)
+                    
+                except Exception as e:
+                    # Update task with error
+                    task = self.get_task(task_id)
+                    error_msg = f"Failed to reprocess game {game_id}: {str(e)}"
+                    task.errors.append(error_msg)
+                    task.failed_items += 1
+                    task.results.append({
+                        "game_id": game_id,
+                        "url": url.strip(),
+                        "status": "failed",
+                        "error": str(e)
+                    })
+                    self.update_task(task_id, 
+                                   errors=task.errors, 
+                                   failed_items=task.failed_items,
+                                   results=task.results)
+                    print(f"Error reprocessing game: {error_msg}")
+            
+            # Mark task as completed
+            self.update_task(task_id, status=TaskStatus.COMPLETED)
+
 
 # Global task queue instance
 task_queue = InMemoryTaskQueue()

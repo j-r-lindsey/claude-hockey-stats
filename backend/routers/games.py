@@ -169,6 +169,44 @@ async def create_bulk_games(
         print(f"Error starting bulk processing: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error starting bulk processing: {str(e)}")
 
+@router.post("/reprocess-all")
+async def reprocess_all_games(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """Reprocess all existing games for the current user"""
+    try:
+        # Get all existing games for the user
+        user_games = supabase.table("games").select("id, hockey_reference_url").eq("user_id", current_user.id).execute()
+        
+        if not user_games.data:
+            return {"message": "No games found to reprocess"}
+        
+        game_urls = [(game["id"], game["hockey_reference_url"]) for game in user_games.data]
+        
+        # Create task
+        task_id = task_queue.create_task(len(game_urls))
+        
+        # Start background processing
+        background_tasks.add_task(
+            task_queue.process_reprocess_games,
+            task_id,
+            game_urls,
+            current_user.id
+        )
+        
+        return {
+            "task_id": task_id,
+            "total_games": len(game_urls),
+            "message": f"Started reprocessing {len(game_urls)} games. Use the task_id to check progress."
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error starting bulk processing: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error starting bulk processing: {str(e)}")
+
 @router.get("/bulk/{task_id}")
 async def get_bulk_task_status(
     task_id: str,
