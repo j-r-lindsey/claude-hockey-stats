@@ -99,6 +99,26 @@ export interface PlayerGameStat {
   hockey_reference_url: string;
 }
 
+export interface TeamGameStat {
+  id: string;
+  team_name: string;
+  is_home: boolean;
+  goals: number;
+  goals_against: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  overtime_losses: number;
+  shootout_losses: number;
+  // Game information
+  game_date: string;
+  home_team: string;
+  away_team: string;
+  final_score_home: number;
+  final_score_away: number;
+  hockey_reference_url: string;
+}
+
 export interface StatsSummary {
   total_games: number;
   teams_seen: string[];

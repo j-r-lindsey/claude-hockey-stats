@@ -19,7 +19,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 import type { PlayerStat, TeamStat } from '../types/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 // CSS for goal differential colors
 const styles = `
@@ -58,8 +58,12 @@ function TabPanel(props: TabPanelProps) {
 const Stats: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   
-  const [tabValue, setTabValue] = useState(0);
+  const [tabValue, setTabValue] = useState(() => {
+    const tabParam = searchParams.get('tab');
+    return tabParam ? parseInt(tabParam, 10) : 0;
+  });
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStat[]>([]);
   const [playerFilters, setPlayerFilters] = useState({
@@ -221,6 +225,16 @@ const Stats: React.FC = () => {
       field: 'team_name', 
       headerName: 'Team', 
       width: 150,
+      renderCell: (params) => (
+        <Link
+          component="button"
+          variant="body2"
+          onClick={() => navigate(`/teams/${encodeURIComponent(params.value)}`)}
+          sx={{ textAlign: 'left', color: 'primary.main', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+        >
+          {params.value}
+        </Link>
+      ),
       sortComparator: (v1, v2) => {
         // Force string comparison to be consistent
         const a = String(v1 || '').toLowerCase();
