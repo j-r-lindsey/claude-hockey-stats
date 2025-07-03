@@ -2,8 +2,7 @@ services:
   # Backend API Service
   - type: web
     name: hockey-stats-backend
-    env: python
-    plan: starter
+    runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
@@ -21,13 +20,11 @@ services:
         value: "1440"
   
   # Frontend Static Site
-  - type: static
+  - type: web
     name: hockey-stats-frontend
-    env: node
-    plan: starter
+    runtime: node
     buildCommand: "cd frontend && npm ci && npm run build"
-    staticPublishPath: ./frontend/dist
-    pullRequestPreviewsEnabled: false
+    startCommand: "cd frontend && npm run preview -- --host 0.0.0.0 --port $PORT"
     envVars:
       - key: VITE_API_URL
         fromService:
