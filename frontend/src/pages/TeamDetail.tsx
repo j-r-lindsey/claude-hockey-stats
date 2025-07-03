@@ -49,11 +49,6 @@ const TeamDetail: React.FC = () => {
     }
   };
 
-  const formatTime = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
 
   const getGameResult = (game: TeamGameStat): string => {
     if (game.wins > 0) return 'W';
@@ -100,7 +95,7 @@ const TeamDetail: React.FC = () => {
       field: 'opponent',
       headerName: 'Opponent',
       width: 180,
-      valueGetter: (value, row) => `${getGameLocation(row)} ${getOpponent(row)}`
+      valueGetter: (params) => `${getGameLocation(params.row)} ${getOpponent(params.row)}`
     },
     {
       field: 'result',
@@ -122,7 +117,7 @@ const TeamDetail: React.FC = () => {
       field: 'score',
       headerName: 'Score',
       width: 100,
-      valueGetter: (value, row) => `${row.goals}-${row.goals_against}`
+      valueGetter: (params) => `${params.row.goals}-${params.row.goals_against}`
     },
     {
       field: 'goals',

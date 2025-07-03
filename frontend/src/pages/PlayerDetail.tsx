@@ -162,7 +162,7 @@ const PlayerDetail: React.FC = () => {
             </Box>
           ) : (
             <TableContainer sx={{ maxHeight: 'calc(100vh - 400px)', overflow: 'auto' }}>
-              <Table size="small" dense stickyHeader>
+              <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>

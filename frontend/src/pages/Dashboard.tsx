@@ -6,7 +6,6 @@ import {
   TextField,
   Card,
   CardContent,
-  Grid,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -44,7 +43,7 @@ const Dashboard: React.FC = () => {
   const [newGameUrl, setNewGameUrl] = useState('');
   const [bulkUrls, setBulkUrls] = useState('');
   const [loading, setLoading] = useState(false);
-  const [bulkTaskId, setBulkTaskId] = useState<string | null>(null);
+  const [, setBulkTaskId] = useState<string | null>(null);
   const [reprocessTaskId, setReprocessTaskId] = useState<string | null>(null);
   const [bulkProgress, setBulkProgress] = useState<any>(null);
   const [reprocessProgress, setReprocessProgress] = useState<any>(null);
@@ -329,7 +328,7 @@ const Dashboard: React.FC = () => {
               </Box>
             ) : (
               <TableContainer>
-                <Table size="small" dense>
+                <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Matchup</TableCell>
