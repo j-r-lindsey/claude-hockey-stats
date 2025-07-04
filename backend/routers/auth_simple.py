@@ -59,7 +59,7 @@ async def register(user_data: UserCreate):
             "created_at": datetime.utcnow().isoformat()
         }
         
-        result = supabase_admin.table("users").insert(new_user).execute()
+        result = supabase_admin.table("users").insert(new_user)
         
         if not result.data:
             raise HTTPException(
