@@ -87,19 +87,26 @@ async def register(user_data: UserCreate):
 @router.post("/login", response_model=Token)
 async def login(login_data: UserLogin):
     try:
+        print(f"Login attempt for email: {login_data.email}")
         # Get user from database
         user_result = supabase.table("users").select("*").eq("email", login_data.email).execute()
+        print(f"Database query result: {len(user_result.data) if user_result.data else 0} users found")
         
         if not user_result.data:
+            print("No user found with this email")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
             )
         
         user = user_result.data[0]
+        print(f"Found user: {user.get('email', 'unknown')}")
         
         # Verify password
-        if not verify_password(login_data.password, user["password_hash"]):
+        password_valid = verify_password(login_data.password, user["password_hash"])
+        print(f"Password verification result: {password_valid}")
+        if not password_valid:
+            print(f"Password hash from DB: {user['password_hash'][:50]}...")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"

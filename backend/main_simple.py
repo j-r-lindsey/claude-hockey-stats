@@ -29,6 +29,7 @@ if frontend_url:
 allowed_origins.extend([
     "https://*.onrender.com",
     "https://hockey-stats-frontend.onrender.com",  # Default frontend service name
+    "https://claude-hockey-stats.onrender.com",  # Your actual deployment URL
 ])
 
 app.add_middleware(
