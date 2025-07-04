@@ -1,7 +1,10 @@
 import axios from 'axios';
 import type { Game, GameCreate, PlayerStat, TeamStat, StatsSummary, PlayerGameStat, TeamGameStat } from '../types/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin);
+// Force production URL when not explicitly set and not on localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://localhost:8000' : 
+   typeof window !== 'undefined' ? window.location.origin : '');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
