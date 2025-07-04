@@ -47,8 +47,8 @@ app.include_router(stats_simple.router, prefix="/stats", tags=["statistics"])
 static_dir = Path(__file__).parent / "static"
 static_dir.mkdir(exist_ok=True)
 
-# Serve static files (React app)
-app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+# Serve static files (React app assets) from root
+app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
 
 @app.get("/")
 async def root():
@@ -61,6 +61,12 @@ async def root():
 @app.get("/{path:path}")
 async def serve_react_app(path: str):
     """Serve the React app for all other routes (SPA routing)"""
+    # Check if it's a static asset first
+    asset_file = static_dir / path
+    if asset_file.exists() and asset_file.is_file():
+        return FileResponse(str(asset_file))
+    
+    # Otherwise serve the React app
     index_file = static_dir / "index.html"
     if index_file.exists():
         return FileResponse(str(index_file))
