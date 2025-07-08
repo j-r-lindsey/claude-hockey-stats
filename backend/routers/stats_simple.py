@@ -26,7 +26,7 @@ async def get_player_stats(
         if position:
             query = query.ilike("position", f"%{position}%")
         
-        result = query.execute()
+        result = query
         
         # Transform the result to match the expected format
         player_stats = []
@@ -72,7 +72,7 @@ async def get_team_stats(
         if team_name:
             query = query.ilike("team_name", f"%{team_name}%")
         
-        result = query.execute()
+        result = query
         
         # Transform the result to match the expected format
         team_stats = []
@@ -104,7 +104,7 @@ async def get_player_game_stats(
     """Get individual game statistics for a specific player"""
     try:
         # Get user's game IDs
-        user_games = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+        user_games = supabase.table("games").select("*").eq("user_id", current_user.id)
         
         if not user_games.data:
             return []
@@ -115,7 +115,7 @@ async def get_player_game_stats(
         games_lookup = {game["id"]: game for game in user_games.data}
         
         # Get player stats for this specific player across all user's games
-        result = supabase.table("player_stats").select("*").eq("player_name", player_name).in_("game_id", game_ids).execute()
+        result = supabase.table("player_stats").select("*").eq("player_name", player_name).in_("game_id", game_ids)
         
         # Combine player stats with game information
         player_games = []
@@ -167,7 +167,7 @@ async def get_team_game_stats(
     """Get individual game statistics for a specific team"""
     try:
         # Get user's game IDs
-        user_games = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+        user_games = supabase.table("games").select("*").eq("user_id", current_user.id)
         
         if not user_games.data:
             return []
@@ -178,7 +178,7 @@ async def get_team_game_stats(
         games_lookup = {game["id"]: game for game in user_games.data}
         
         # Get team stats for this specific team across all user's games
-        result = supabase.table("team_stats").select("*").eq("team_name", team_name).in_("game_id", game_ids).execute()
+        result = supabase.table("team_stats").select("*").eq("team_name", team_name).in_("game_id", game_ids)
         
         # Combine team stats with game information
         team_games = []
@@ -218,7 +218,7 @@ async def get_team_game_stats(
 @router.get("/summary")
 async def get_stats_summary(current_user: User = Depends(get_current_user)):
     # Get user's game IDs
-    games_result = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+    games_result = supabase.table("games").select("*").eq("user_id", current_user.id)
     games = games_result.data
     
     if not games:
@@ -232,7 +232,7 @@ async def get_stats_summary(current_user: User = Depends(get_current_user)):
     game_ids = [game["id"] for game in games]
     
     # Get team stats
-    team_stats_result = supabase.table("team_stats").select("*").in_("game_id", game_ids).execute()
+    team_stats_result = supabase.table("team_stats").select("*").in_("game_id", game_ids)
     team_stats = team_stats_result.data
     
     # Calculate summary statistics

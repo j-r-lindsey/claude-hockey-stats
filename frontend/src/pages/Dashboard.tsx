@@ -24,6 +24,7 @@ import {
   ListItem,
   ListItemText,
   Chip,
+  TableSortLabel,
 } from '@mui/material';
 import { Add, Delete, Sports, Refresh, OpenInNew, Upload } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -48,6 +49,9 @@ const Dashboard: React.FC = () => {
   const [bulkProgress, setBulkProgress] = useState<any>(null);
   const [reprocessProgress, setReprocessProgress] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sortColumn, setSortColumn] = useState<'date_attended' | 'created_at'>('date_attended');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [sortedGames, setSortedGames] = useState<Game[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -56,6 +60,16 @@ const Dashboard: React.FC = () => {
     }
     loadData();
   }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    // Sort games whenever games, sortColumn, or sortOrder changes
+    const sorted = [...games].sort((a, b) => {
+      const dateA = new Date(a[sortColumn]).getTime();
+      const dateB = new Date(b[sortColumn]).getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+    setSortedGames(sorted);
+  }, [games, sortColumn, sortOrder]);
 
   const loadData = async () => {
     try {
@@ -67,6 +81,17 @@ const Dashboard: React.FC = () => {
       setSummary(summaryData);
     } catch (error) {
       setError('Failed to load data');
+    }
+  };
+
+  const handleSort = (column: 'date_attended' | 'created_at') => {
+    if (sortColumn === column) {
+      // Same column, toggle sort order
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+    } else {
+      // Different column, set new column and default to desc
+      setSortColumn(column);
+      setSortOrder('desc');
     }
   };
 
@@ -333,13 +358,29 @@ const Dashboard: React.FC = () => {
                     <TableRow>
                       <TableCell>Matchup</TableCell>
                       <TableCell>Score</TableCell>
-                      <TableCell>Game Date</TableCell>
-                      <TableCell>Last Parsed</TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortColumn === 'date_attended'}
+                          direction={sortColumn === 'date_attended' ? sortOrder : 'desc'}
+                          onClick={() => handleSort('date_attended')}
+                        >
+                          Game Date
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell>
+                        <TableSortLabel
+                          active={sortColumn === 'created_at'}
+                          direction={sortColumn === 'created_at' ? sortOrder : 'desc'}
+                          onClick={() => handleSort('created_at')}
+                        >
+                          Last Parsed
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {games.map((game) => (
+                    {sortedGames.map((game) => (
                       <TableRow key={game.id} hover>
                         <TableCell>
                           <Typography variant="body2">

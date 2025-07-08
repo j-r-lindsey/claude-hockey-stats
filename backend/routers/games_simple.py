@@ -45,7 +45,7 @@ async def create_game(
         }
         
         print(f"Creating game record: {game_record}")
-        result = supabase.table("games").insert(game_record).execute()
+        result = supabase.table("games").insert(game_record)
         print(f"Game creation result: {result}")
         
         if not result.data:
@@ -58,13 +58,13 @@ async def create_game(
         print(f"Storing {len(parsed_data['player_stats'])} player stats")
         for player_stat in parsed_data["player_stats"]:
             player_stat["game_id"] = game_id
-            supabase.table("player_stats").insert(player_stat).execute()
+            supabase.table("player_stats").insert(player_stat)
         
         # Store team stats
         print(f"Storing {len(parsed_data['team_stats'])} team stats")
         for team_stat in parsed_data["team_stats"]:
             team_stat["game_id"] = game_id
-            supabase.table("team_stats").insert(team_stat).execute()
+            supabase.table("team_stats").insert(team_stat)
         
         print("Successfully created game and stats")
         return Game(**result.data[0])
@@ -77,7 +77,7 @@ async def create_game(
 
 @router.get("/", response_model=List[Game])
 async def get_user_games(current_user: User = Depends(get_current_user)):
-    result = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+    result = supabase.table("games").select("*").eq("user_id", current_user.id)
     return [Game(**game) for game in result.data]
 
 @router.get("/{game_id}", response_model=Game)
@@ -85,7 +85,7 @@ async def get_game(
     game_id: str,
     current_user: User = Depends(get_current_user)
 ):
-    result = supabase.table("games").select("*").eq("id", game_id).eq("user_id", current_user.id).execute()
+    result = supabase.table("games").select("*").eq("id", game_id).eq("user_id", current_user.id)
     
     if not result.data:
         raise HTTPException(status_code=404, detail="Game not found")
@@ -98,15 +98,15 @@ async def delete_game(
     current_user: User = Depends(get_current_user)
 ):
     # Verify game belongs to user
-    result = supabase.table("games").select("*").eq("id", game_id).eq("user_id", current_user.id).execute()
+    result = supabase.table("games").select("*").eq("id", game_id).eq("user_id", current_user.id)
     
     if not result.data:
         raise HTTPException(status_code=404, detail="Game not found")
     
     # Delete related records
-    supabase.table("player_stats").delete().eq("game_id", game_id).execute()
-    supabase.table("team_stats").delete().eq("game_id", game_id).execute()
-    supabase.table("games").delete().eq("id", game_id).execute()
+    supabase.table("player_stats").delete().eq("game_id", game_id)
+    supabase.table("team_stats").delete().eq("game_id", game_id)
+    supabase.table("games").delete().eq("id", game_id)
     
     return {"message": "Game deleted successfully"}
 
@@ -177,7 +177,7 @@ async def reprocess_all_games(
     """Reprocess all existing games for the current user"""
     try:
         # Get all existing games for the user
-        user_games = supabase.table("games").select("id, hockey_reference_url").eq("user_id", current_user.id).execute()
+        user_games = supabase.table("games").select("id, hockey_reference_url").eq("user_id", current_user.id)
         
         if not user_games.data:
             return {"message": "No games found to reprocess"}

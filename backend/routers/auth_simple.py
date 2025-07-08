@@ -29,7 +29,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise credentials_exception
     
     # Get user from Supabase
-    user_result = supabase.table("users").select("*").eq("email", email).execute()
+    user_result = supabase.table("users").select("*").eq("email", email)
     if not user_result.data:
         raise credentials_exception
     
@@ -40,7 +40,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def register(user_data: UserCreate):
     try:
         # Check if user already exists
-        existing_user = supabase.table("users").select("*").eq("email", user_data.email).execute()
+        existing_user = supabase.table("users").select("*").eq("email", user_data.email)
         
         if existing_user.data:
             raise HTTPException(
@@ -87,26 +87,19 @@ async def register(user_data: UserCreate):
 @router.post("/login", response_model=Token)
 async def login(login_data: UserLogin):
     try:
-        print(f"Login attempt for email: {login_data.email}")
         # Get user from database
-        user_result = supabase.table("users").select("*").eq("email", login_data.email).execute()
-        print(f"Database query result: {len(user_result.data) if user_result.data else 0} users found")
+        user_result = supabase.table("users").select("*").eq("email", login_data.email)
         
         if not user_result.data:
-            print("No user found with this email")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
             )
         
         user = user_result.data[0]
-        print(f"Found user: {user.get('email', 'unknown')}")
         
         # Verify password
-        password_valid = verify_password(login_data.password, user["password_hash"])
-        print(f"Password verification result: {password_valid}")
-        if not password_valid:
-            print(f"Password hash from DB: {user['password_hash'][:50]}...")
+        if not verify_password(login_data.password, user["password_hash"]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"

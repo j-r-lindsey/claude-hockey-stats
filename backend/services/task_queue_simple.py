@@ -105,7 +105,7 @@ class InMemoryTaskQueue:
                     }
                     
                     # Insert game
-                    result = supabase.table("games").insert(game_record).execute()
+                    result = supabase.table("games").insert(game_record)
                     
                     if result.data:
                         game_id = result.data[0]["id"]
@@ -113,12 +113,12 @@ class InMemoryTaskQueue:
                         # Store player stats
                         for player_stat in parsed_data["player_stats"]:
                             player_stat["game_id"] = game_id
-                            supabase.table("player_stats").insert(player_stat).execute()
+                            supabase.table("player_stats").insert(player_stat)
                         
                         # Store team stats
                         for team_stat in parsed_data["team_stats"]:
                             team_stat["game_id"] = game_id
-                            supabase.table("team_stats").insert(team_stat).execute()
+                            supabase.table("team_stats").insert(team_stat)
                         
                         # Update task with success
                         task = self.get_task(task_id)
@@ -174,7 +174,7 @@ class InMemoryTaskQueue:
                         date_attended = game_date
                     else:
                         # Keep existing date
-                        existing_game = supabase.table("games").select("date_attended").eq("id", game_id).execute()
+                        existing_game = supabase.table("games").select("date_attended").eq("id", game_id)
                         date_attended = existing_game.data[0]["date_attended"] if existing_game.data else datetime.now().isoformat()
                     
                     # Update game record
@@ -184,26 +184,25 @@ class InMemoryTaskQueue:
                         "home_team": parsed_data["home_team"],
                         "away_team": parsed_data["away_team"],
                         "final_score_home": parsed_data["final_score_home"],
-                        "final_score_away": parsed_data["final_score_away"],
-                        "created_at": datetime.now().isoformat()
+                        "final_score_away": parsed_data["final_score_away"]
                     }
                     
                     # Update the game
-                    supabase.table("games").update(game_record).eq("id", game_id).execute()
+                    supabase.table("games").update(game_record).eq("id", game_id)
                     
                     # Delete existing stats for this game
-                    supabase.table("player_stats").delete().eq("game_id", game_id).execute()
-                    supabase.table("team_stats").delete().eq("game_id", game_id).execute()
+                    supabase.table("player_stats").delete().eq("game_id", game_id)
+                    supabase.table("team_stats").delete().eq("game_id", game_id)
                     
                     # Store updated player stats
                     for player_stat in parsed_data["player_stats"]:
                         player_stat["game_id"] = game_id
-                        supabase.table("player_stats").insert(player_stat).execute()
+                        supabase.table("player_stats").insert(player_stat)
                     
                     # Store updated team stats
                     for team_stat in parsed_data["team_stats"]:
                         team_stat["game_id"] = game_id
-                        supabase.table("team_stats").insert(team_stat).execute()
+                        supabase.table("team_stats").insert(team_stat)
                     
                     # Update task with success
                     task = self.get_task(task_id)

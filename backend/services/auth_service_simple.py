@@ -13,9 +13,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
         # Check if it's a bcrypt hash (legacy format)
         if hashed_password.startswith('$2b$') or hashed_password.startswith('$2a$'):
-            # For bcrypt hashes, we need to install bcrypt or use a workaround
-            # Since we can't use bcrypt in minimal requirements, we'll need to update these passwords
-            print(f"Found legacy bcrypt hash, needs migration")
+            # Legacy bcrypt hashes are not supported in minimal deployment
             return False
         
         # PBKDF2 format: salt:hash
@@ -29,8 +27,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             return hmac.compare_digest(stored_hash, password_hash.hex())
         
         return False
-    except Exception as e:
-        print(f"Password verification error: {e}")
+    except:
         return False
 
 def get_password_hash(password: str) -> str:
