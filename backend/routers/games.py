@@ -5,6 +5,7 @@ from routers.auth import get_current_user
 from config.database import supabase
 from services.hockey_parser import parse_hockey_reference_url
 from services.task_queue import task_queue, TaskStatus
+from services.arena_service import ArenaService
 from datetime import datetime
 import re
 
@@ -79,6 +80,57 @@ async def create_game(
 async def get_user_games(current_user: User = Depends(get_current_user)):
     result = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
     return [Game(**game) for game in result.data]
+
+@router.get("/locations")
+async def get_games_with_locations(
+    current_user: User = Depends(get_current_user)
+):
+    """Get all user's games with arena location data"""
+    try:
+        # Get user's games
+        result = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+        
+        if not result.data:
+            return []
+        
+        # Enrich games with location data
+        games_with_locations = ArenaService.get_games_with_locations(result.data)
+        
+        return games_with_locations
+        
+    except Exception as e:
+        print(f"Error getting games with locations: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get game locations")
+
+@router.get("/arenas")
+async def get_unique_arenas(
+    current_user: User = Depends(get_current_user)
+):
+    """Get unique arenas visited by the user"""
+    try:
+        # Get user's games
+        result = supabase.table("games").select("*").eq("user_id", current_user.id).execute()
+        
+        if not result.data:
+            return []
+        
+        # Get unique arenas with visit counts
+        unique_arenas = ArenaService.get_unique_arenas_from_games(result.data)
+        
+        return unique_arenas
+        
+    except Exception as e:
+        print(f"Error getting unique arenas: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get arena data")
+
+@router.get("/all-arenas")
+async def get_all_nhl_arenas():
+    """Get all NHL arenas (public endpoint)"""
+    try:
+        return ArenaService.get_all_nhl_arenas()
+    except Exception as e:
+        print(f"Error getting all arenas: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get arena data")
 
 @router.get("/{game_id}", response_model=Game)
 async def get_game(
@@ -230,3 +282,4 @@ async def get_bulk_task_status(
         "created_at": task.created_at.isoformat(),
         "updated_at": task.updated_at.isoformat()
     }
+

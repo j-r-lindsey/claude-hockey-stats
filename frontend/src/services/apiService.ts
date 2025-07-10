@@ -89,4 +89,20 @@ export const apiService = {
     const response = await api.get(`/stats/teams/${encodeURIComponent(teamName)}/games`);
     return response.data;
   },
+
+  // Arena locations
+  async getGamesWithLocations(): Promise<any[]> {
+    const response = await api.get('/games/locations');
+    return response.data;
+  },
+
+  async getUniqueArenas(): Promise<any[]> {
+    const response = await api.get('/games/arenas');
+    return response.data;
+  },
+
+  async getAllNHLArenas(): Promise<any[]> {
+    const response = await api.get('/games/all-arenas');
+    return response.data;
+  },
 };

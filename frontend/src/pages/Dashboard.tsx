@@ -25,8 +25,22 @@ import {
   ListItemText,
   Chip,
   TableSortLabel,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { Add, Delete, Sports, Refresh, OpenInNew, Upload } from '@mui/icons-material';
+import { Add, Delete, Sports, Refresh, OpenInNew, Upload, Timeline, Map } from '@mui/icons-material';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default markers in react-leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/apiService';
 import type { Game, GameCreate, StatsSummary } from '../types/api';
@@ -52,6 +66,8 @@ const Dashboard: React.FC = () => {
   const [sortColumn, setSortColumn] = useState<'date_attended' | 'created_at'>('date_attended');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [sortedGames, setSortedGames] = useState<Game[]>([]);
+  const [currentTab, setCurrentTab] = useState(0);
+  const [uniqueArenas, setUniqueArenas] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -79,6 +95,15 @@ const Dashboard: React.FC = () => {
       ]);
       setGames(gamesData);
       setSummary(summaryData);
+      
+      // Load arena data separately with error handling
+      try {
+        const arenasData = await apiService.getUniqueArenas();
+        setUniqueArenas(arenasData);
+      } catch (arenaError) {
+        console.warn('Failed to load arena data:', arenaError);
+        setUniqueArenas([]);
+      }
     } catch (error) {
       setError('Failed to load data');
     }
@@ -94,6 +119,35 @@ const Dashboard: React.FC = () => {
       setSortOrder('desc');
     }
   };
+
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setCurrentTab(newValue);
+  };
+
+  const generateGameCountByYear = () => {
+    const yearCounts: { [year: string]: number } = {};
+    
+    // Count games by year
+    games.forEach(game => {
+      const year = new Date(game.date_attended).getFullYear().toString();
+      yearCounts[year] = (yearCounts[year] || 0) + 1;
+    });
+    
+    // Convert to array and sort by year
+    const sortedYears = Object.keys(yearCounts).sort();
+    let cumulativeCount = 0;
+    
+    return sortedYears.map(year => {
+      cumulativeCount += yearCounts[year];
+      return {
+        year: year,
+        count: cumulativeCount,
+        yearlyCount: yearCounts[year]
+      };
+    });
+  };
+
+  const chartData = generateGameCountByYear();
 
   const handleAddGame = async () => {
     if (!newGameUrl) return;
@@ -339,104 +393,217 @@ const Dashboard: React.FC = () => {
           </Box>
         </Box>
 
+        <Box sx={{ mb: 2 }}>
+          <Tabs value={currentTab} onChange={handleTabChange} aria-label="game data tabs">
+            <Tab icon={<Sports />} label="Games List" />
+            <Tab icon={<Timeline />} label="Growth Chart" />
+            <Tab icon={<Map />} label="Game Map" />
+          </Tabs>
+        </Box>
+
         <Card>
           <CardContent>
-            {games.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Sports sx={{ fontSize: 60, color: 'grey.400', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary">
-                  No games added yet
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Add your first game to start tracking statistics!
-                </Typography>
+            {/* Tab Panel 0: Games List */}
+            {currentTab === 0 && (
+              <Box>
+                {games.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Sports sx={{ fontSize: 60, color: 'grey.400', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary">
+                      No games added yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Add your first game to start tracking statistics!
+                    </Typography>
+                  </Box>
+                ) : (
+                  <TableContainer>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Matchup</TableCell>
+                          <TableCell>Score</TableCell>
+                          <TableCell>
+                            <TableSortLabel
+                              active={sortColumn === 'date_attended'}
+                              direction={sortColumn === 'date_attended' ? sortOrder : 'desc'}
+                              onClick={() => handleSort('date_attended')}
+                            >
+                              Game Date
+                            </TableSortLabel>
+                          </TableCell>
+                          <TableCell>
+                            <TableSortLabel
+                              active={sortColumn === 'created_at'}
+                              direction={sortColumn === 'created_at' ? sortOrder : 'desc'}
+                              onClick={() => handleSort('created_at')}
+                            >
+                              Last Parsed
+                            </TableSortLabel>
+                          </TableCell>
+                          <TableCell align="center">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {sortedGames.map((game) => (
+                          <TableRow key={game.id} hover>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {game.away_team} @ {game.home_team}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {game.final_score_away} - {game.final_score_home}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {new Date(game.date_attended).toLocaleDateString()}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {new Date(game.created_at).toLocaleDateString()} {new Date(game.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                                <Tooltip title="View Original Game">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleViewGame(game.hockey_reference_url)}
+                                  >
+                                    <OpenInNew fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Re-parse Game Data">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleRefreshGame(game.id, game.hockey_reference_url)}
+                                    disabled={loading}
+                                  >
+                                    <Refresh fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete Game">
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => handleDeleteGame(game.id)}
+                                    color="error"
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                )}
               </Box>
-            ) : (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Matchup</TableCell>
-                      <TableCell>Score</TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={sortColumn === 'date_attended'}
-                          direction={sortColumn === 'date_attended' ? sortOrder : 'desc'}
-                          onClick={() => handleSort('date_attended')}
-                        >
-                          Game Date
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>
-                        <TableSortLabel
-                          active={sortColumn === 'created_at'}
-                          direction={sortColumn === 'created_at' ? sortOrder : 'desc'}
-                          onClick={() => handleSort('created_at')}
-                        >
-                          Last Parsed
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell align="center">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {sortedGames.map((game) => (
-                      <TableRow key={game.id} hover>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {game.away_team} @ {game.home_team}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {game.final_score_away} - {game.final_score_home}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {new Date(game.date_attended).toLocaleDateString()}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="body2">
-                            {new Date(game.created_at).toLocaleDateString()} {new Date(game.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Box sx={{ display: 'flex', gap: 0.5 }}>
-                            <Tooltip title="View Original Game">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleViewGame(game.hockey_reference_url)}
-                              >
-                                <OpenInNew fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Re-parse Game Data">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleRefreshGame(game.id, game.hockey_reference_url)}
-                                disabled={loading}
-                              >
-                                <Refresh fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete Game">
-                              <IconButton
-                                size="small"
-                                onClick={() => handleDeleteGame(game.id)}
-                                color="error"
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+            )}
+
+            {/* Tab Panel 1: Growth Chart */}
+            {currentTab === 1 && (
+              <Box>
+                {games.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Timeline sx={{ fontSize: 60, color: 'grey.400', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary">
+                      No games to chart yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Add some games to see your attendance growth over time!
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Cumulative Games Attended Over Time
+                    </Typography>
+                    <Box sx={{ height: 400, width: '100%' }}>
+                      <ResponsiveContainer>
+                        <LineChart data={chartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="year" />
+                          <YAxis />
+                          <RechartsTooltip
+                            formatter={(value: number, name: string) => [
+                              name === 'count' ? `${value} total games` : `${value} games`,
+                              name === 'count' ? 'Total Games' : 'Games This Year'
+                            ]}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#1976d2"
+                            strokeWidth={2}
+                            dot={{ fill: '#1976d2' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
+            )}
+
+            {/* Tab Panel 2: Game Map */}
+            {currentTab === 2 && (
+              <Box>
+                {uniqueArenas.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Map sx={{ fontSize: 60, color: 'grey.400', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary">
+                      No arenas to map yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Add some games to see the arenas you've visited on the map!
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Typography variant="h6" gutterBottom>
+                      Arenas You've Visited ({uniqueArenas.length})
+                    </Typography>
+                    <Box sx={{ height: 500, width: '100%', mt: 2 }}>
+                      <MapContainer
+                        center={[43.6532, -79.3832]} // Center on Toronto
+                        zoom={4}
+                        style={{ height: '100%', width: '100%' }}
+                      >
+                        <TileLayer
+                          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                        {uniqueArenas.map((arena, index) => (
+                          <Marker
+                            key={index}
+                            position={[arena.latitude, arena.longitude]}
+                          >
+                            <Popup>
+                              <div>
+                                <strong>{arena.arena_name}</strong><br />
+                                {arena.city}, {arena.state}, {arena.country}<br />
+                                <em>Games attended: {arena.games_attended}</em><br />
+                                <small>Teams: {arena.teams.join(', ')}</small>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        ))}
+                      </MapContainer>
+                    </Box>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Click on markers to see arena details and games attended.
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+              </Box>
             )}
           </CardContent>
         </Card>
